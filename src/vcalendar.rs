@@ -1,6 +1,8 @@
 //! Provides structures and functions to interact with calendar-related
 //! objects, such as VCALENDARs and VEVENTs.
 
+use std::fmt;
+
 pub enum DtendDuration {
     Dtend,
     Duration,
@@ -19,24 +21,24 @@ pub struct Vevent {
     dtstamp: String,
     uid: String,
     // REQUIRED, if the parent Vcalendar does not contain the "METHOD" property
-    dtstart: String,
+    dtstart: Option<String>,
     // OPTIONAL, but MUST NOT occur more than once
-    class: String,
-    created: String,
-    description: String,
-    geo: String,
-    last_mod: String,
-    location: String,
-    organizer: String,
-    priority: String,
-    seq: String,
-    status: String,
-    summary: String,
-    transp: String,
-    url: String,
-    recurid: String,
+    class: Option<String>,
+    created: Option<String>,
+    description: Option<String>,
+    geo: Option<String>,
+    last_mod: Option<String>,
+    location: Option<String>,
+    organizer: Option<String>,
+    priority: Option<String>,
+    seq: Option<String>,
+    status: Option<String>,
+    summary: Option<String>,
+    transp: Option<String>,
+    url: Option<String>,
+    recurid: Option<String>,
     // OPTIONAL, but SHOULD NOT occur more than once
-    rrule: String,
+    rrule: Vec<String>,
     // Either 'dtend' or 'duration' MAY appear once in a 'VEVENT',
     // but 'dtend' and 'duration' MUST NOT occur in the same 'VEVENT'
     dtend_or_duration: DtendDuration,
@@ -53,16 +55,31 @@ pub struct Vevent {
     rdate: Vec<String>,
     x_prop: Vec<String>,
     iana_prop: Vec<String>,
-    // OPTIONAL, and MAY occur omore than once
-    alarms: Vec<Valarm>,
+    // TODO: OPTIONAL, and MAY occur omore than once
+    // alarms: Vec<Valarm>,
+}
+impl Vevent {
+    pub(crate) fn set_dtstart(mut self, arg: &str) -> Vevent {
+        // TODO: Validate input!!!
+        self.dtstart = Some(String::from(arg));
+        self
+    }
 }
 
-struct Vjournal {
-    parent: Vcomponent,
-}
+impl fmt::Display for Vevent {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut s = String::from("BEGIN:VEVENT\r\n");
+        s = s + "DTSTAMP:" + &self.dtstamp + "\r\n";
+        s = s + "UID:" + &self.uid + "\r\n";
 
-struct Vtodo {
-    parent: Vcomponent,
+        match &self.dtstart {
+            Some(value) => { s = s + "DTSTART:" + value + "\r\n"; }
+            None => {},
+        }
+
+        s = s + "END:VEVENT\r\n";
+        write!(f, "{}", s)
+    }
 }
 
 struct Valarm {
@@ -75,13 +92,14 @@ pub struct Vcalendar {
     pub version: String,
     pub prodid: String,
     // OPTIONAL, but MUST NOT occur more than once
-    pub calscale: String,
-    pub method: String,
+    pub calscale: Option<String>,
+    pub method: Option<String>,
     // OPTIONAL, and MAY occur more than once
-    pub x_prop: String,
-    pub iana_prop: String,
+    pub x_prop: Vec<String>,
+    pub iana_prop: Vec<String>,
     // Components (may be of any type included in the Vcomponent enum)
-    pub components: Vec<Vcomponent>,
+    // TODO: Replace events by components, or add more vectors for components such as VFREEBUSY, VJOURNAL, VTODO, etc
+    pub events: Vec<Vevent>,
 }
 
 impl Vcalendar {
@@ -93,40 +111,42 @@ impl Vcalendar {
             prodid: prodid.clone(),
             version: version.clone(),
             // OPTIONAL, but MUST NOT occur more than once
-            calscale: "TODO".to_string(),
-            method: "TODO".to_string(),
+            calscale: None,
+            method: None,
             // OPTIONAL, and MAY occur more than once
-            x_prop: "TODO".to_string(),
-            iana_prop: "TODO".to_string(),
+            x_prop: Vec::<String>::new(),
+            iana_prop: Vec::<String>::new(),
             // Components (may be of any type included in the Vcomponent enum)
-            components: Vec::<Vcomponent>::new(),
+            events: Vec::<Vevent>::new(),
         }
     }
 
-    pub fn new_vevent(dtstamp: String, uid: String) -> Vevent {
+    /// Generate a new VEVENT object relative to the parent VCALENDAR, as the parent defines
+    /// the context in which the VEVENT object is created.
+    pub fn new_vevent(&self, dtstamp: String, uid: String) -> Vevent {
         Vevent {
             // REQUIRED, but MUST NOT occur more than once
             dtstamp: dtstamp.clone(),
             uid: uid.clone(),
             // REQUIRED, if the parent Vcalendar does not contain the "METHOD" property
-            dtstart: "TODO".to_string(),
+            dtstart: Some("TODO".to_string()),
             // OPTIONAL, but MUST NOT occur more than once
-            class: "TODO".to_string(),
-            created: "TODO".to_string(),
-            description: "TODO".to_string(),
-            geo: "TODO".to_string(),
-            last_mod: "TODO".to_string(),
-            location: "TODO".to_string(),
-            organizer: "TODO".to_string(),
-            priority: "TODO".to_string(),
-            seq: "TODO".to_string(),
-            status: "TODO".to_string(),
-            summary: "TODO".to_string(),
-            transp: "TODO".to_string(),
-            url: "TODO".to_string(),
-            recurid: "TODO".to_string(),
+            class: None,
+            created: None,
+            description: None,
+            geo: None,
+            last_mod: None,
+            location: None,
+            organizer: None,
+            priority: None,
+            seq: None,
+            status: None,
+            summary: None,
+            transp: None,
+            url: None,
+            recurid: None,
             // OPTIONAL, but SHOULD NOT occur more than once
-            rrule: "TODO".to_string(),
+            rrule: Vec::<String>::new(),
             // Either 'dtend' or 'duration' MAY appear once in a 'VEVENT',
             // but 'dtend' and 'duration' MUST NOT occur in the same 'VEVENT'
             dtend_or_duration: DtendDuration::None,
@@ -143,30 +163,28 @@ impl Vcalendar {
             rdate: Vec::<String>::new(),
             x_prop: Vec::<String>::new(),
             iana_prop: Vec::<String>::new(),
-            // OPTIONAL, and MAY occur omore than once
-            alarms: Vec::<Valarm>::new(),
+            // TODO: OPTIONAL, and MAY occur omore than once
+            // alarms: Vec::<Valarm>::new(),
         }
     }
+}
 
-    /// Print the contents of VCALENDAR to stdout.
-    pub fn print_vcalendar(self) {
-        println!(
-            "VCALENDAR:\n\
-             - prodid: {}\n\
-             - version: {}\n\
-             - calscale: {}\n\
-             - method: {}\n\
-             - x-prop: {}\n\
-             - iana-prop: {}",
-            self.prodid,
-            self.version,
-            self.calscale,
-            self.method,
-            self.x_prop,
-            self.iana_prop,
-        );
+impl fmt::Display for Vcalendar {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut s = String::from("BEGIN:VCALENDAR\r\n");
+        s = s + "VERSION:" + &self.version + "\r\n";
+        s = s + "PRODID:" + &self.prodid + "\r\n";
+
+        self.events.iter().for_each(|event| {
+            s = format!("{}{}", s, event);
+        });
+
+        let s = s + "END:VCALENDAR\r\n";
+        write!(f, "{}", s)
     }
 }
+
+
 
 #[cfg(tests)]
 mod tests {
