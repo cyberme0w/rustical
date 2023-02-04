@@ -3,7 +3,19 @@
 mod vcalendar;
 use vcalendar::*;
 
+use clap::Parser;
+
+/// Parse the provided *.ics file into a VCALENDAR object, and output it to STDOUT
+#[derive(Parser)]
+struct Cli {
+    /// The path to the *.ics file
+    #[arg(short, long)]
+    path: std::path::PathBuf,
+}
+
 fn main() {
+    let args = Cli::parse();
+
     let prodid = "prodid".to_string();
     let version = "2.0".to_string();
     let mut vcalendar = Vcalendar::new_vcalendar(prodid, version);
