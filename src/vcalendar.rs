@@ -4,12 +4,6 @@
 use datetime;
 use std::fmt;
 
-pub enum DtendDuration {
-    Dtend,
-    Duration,
-    None,
-}
-
 pub enum Vcomponent {
     Vevent,
     // TODO: Vjournal,
@@ -17,8 +11,7 @@ pub enum Vcomponent {
     // TODO: Valarm,
 }
 
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum VeventClass {
     PUBLIC,
     PRIVATE,
@@ -51,7 +44,8 @@ pub struct Vevent {
     rrule: Vec<String>,
     // Either 'dtend' or 'duration' MAY appear once in a 'VEVENT',
     // but 'dtend' and 'duration' MUST NOT occur in the same 'VEVENT'
-    dtend_or_duration: DtendDuration,
+    dtend: Option<datetime::Instant>,
+    duration: Option<String>,
     // OPTIONAL, and MAY occur more than once
     attach: Vec<String>,
     attendee: Vec<String>,
@@ -194,7 +188,8 @@ impl Vcalendar {
             rrule: Vec::<String>::new(),
             // Either 'dtend' or 'duration' MAY appear once in a 'VEVENT',
             // but 'dtend' and 'duration' MUST NOT occur in the same 'VEVENT'
-            dtend_or_duration: DtendDuration::None,
+            dtend: None,
+            duration: None,
             // OPTIONAL, and MAY occur more than once
             attach: Vec::<String>::new(),
             attendee: Vec::<String>::new(),
@@ -229,25 +224,29 @@ impl fmt::Display for Vcalendar {
     }
 }
 
-#[cfg(tests)]
-mod basic_tests {
-    #[test]
-    fn test_new_vcalendar() {
-        let cal = Vcalendar::new_vcalendar(String::from("prodid"), String::from("version"));
-        assert_eq!(cal.prodid, "prodid");
-        assert_eq!(cal.version, "version");
-        assert_eq!(cal.calscale, "");
-        assert_eq!(cal.method, "");
-        assert_eq!(cal.x_prop, "");
-        assert_eq!(cal.iana_prop, "");
-    }
-    #[test]
-    fn test_new_vevent() {
-        let cal = Vcalendar::new_vcalendar("prodid", "version");
-        let ev = cal.new_vevent("dtstamp", "uid");
-        assert_eq!(ev.dtstamp, "dtstamp");
-        assert_eq!(ev.uid, "uid");
-    }
+#[test]
+fn test_new_vcalendar() {
+    let cal = Vcalendar::new_vcalendar(String::from("prodid"), String::from("version"));
+    assert_eq!(cal.prodid, "prodid");
+    assert_eq!(cal.version, "version");
+    assert_eq!(cal.calscale, None);
+    assert_eq!(cal.method, None);
+    assert_eq!(cal.x_prop, Vec::<String>::new());
+    assert_eq!(cal.iana_prop, Vec::<String>::new());
+}
+
+#[test]
+fn test_new_vevent() {
+    let prodid = "prodid".to_string();
+    let version = "version".to_string();
+    let cal = Vcalendar::new_vcalendar(prodid, version);
+
+    let dtstamp = "dtstamp".to_string();
+    let uid = "uid".to_string();
+    let ev = cal.new_vevent(dtstamp, uid);
+
+    assert_eq!(ev.dtstamp, "dtstamp");
+    assert_eq!(ev.uid, "uid");
 }
 
 #[test]
@@ -282,4 +281,22 @@ fn test_vevent_class_setter() {
     ev = ev.set_class("public");
     assert_eq!(ev.class, Some(VeventClass::PUBLIC));
     assert_eq!(ev.class_identifier, None);
+}
+
+#[test]
+fn test_vevent_created_setter() {
+    let prodid = "prodid".to_string();
+    let version = "2.0".to_string();
+    let cal = Vcalendar::new_vcalendar(prodid, version);
+
+    let dtstamp = "dtstamp".to_string();
+    let uid = "uid".to_string();
+    let mut ev = cal.new_vevent(dtstamp, uid);
+
+    assert!(ev.created.is_none());
+
+    let dt = datetime::Instant::now();
+    ev = ev.set_created(dt);
+
+    assert!(ev.created == Some(dt));
 }
