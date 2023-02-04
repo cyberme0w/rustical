@@ -1,26 +1,36 @@
 //! `rustical` provides a way to interact with vcalendar (.ics) files.
-//!
-//! Each type of 
 
 mod vcalendar;
 use vcalendar::*;
 
-
-use std::path::Path;
-use std::fs;
-
-fn generate_rustical_data_dir() -> std::io::Result<()> {
-    fs::create_dir("./rustical_data")?;
-    Ok(())
-}
-
 fn main() {
-    let prodid = String::from("prodid");
-    let version = String::from("version");
-    let v = Vcalendar::new_vcalendar(prodid, version);
+    let prodid = "prodid".to_string();
+    let version = "2.0".to_string();
+    let mut vcalendar = Vcalendar::new_vcalendar(prodid, version);
 
-    println!("Generated empty calendar!");
-    v.print_vcalendar();
+    let dtstamp = "123123".to_string();
+    let uid = "totally_unique_identifier".to_string();
+
+    let mut vevent1 = vcalendar.new_vevent(dtstamp, uid);
+    let mut vevent2 = vcalendar.new_vevent("second dtstamp".to_owned(), "second uid".to_owned());
+
+    vevent1 = vevent1.set_dtstart("some_dtstart");
+    vevent2 = vevent2.set_dtstart("some_other_dtstart");
+
+    vcalendar.events.push(vevent1);
+    vcalendar.events.push(vevent2);
+
+    println!("{}", vcalendar);
+    // println!("vevent: \n{}", event);
+
+    //v.print_vcalendar();
 
     //generate_rustical_data_dir();
 }
+
+#[test]
+pub fn test_vcalendar_setters() {
+    assert_eq!(true, true);
+}
+#[test]
+pub fn test_vevent_setters() {}

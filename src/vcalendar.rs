@@ -1,6 +1,7 @@
 //! Provides structures and functions to interact with calendar-related
 //! objects, such as VCALENDARs and VEVENTs.
 
+use datetime;
 use std::fmt;
 
 pub enum DtendDuration {
@@ -11,9 +12,17 @@ pub enum DtendDuration {
 
 pub enum Vcomponent {
     Vevent,
-    Vjournal,
-    Vtodo,
-    Valarm,
+    // TODO: Vjournal,
+    // TODO: Vtodo,
+    // TODO: Valarm,
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub enum VeventClass {
+    PUBLIC,
+    PRIVATE,
+    CONFIDENTIAL,
 }
 
 pub struct Vevent {
@@ -23,8 +32,9 @@ pub struct Vevent {
     // REQUIRED, if the parent Vcalendar does not contain the "METHOD" property
     dtstart: Option<String>,
     // OPTIONAL, but MUST NOT occur more than once
-    class: Option<String>,
-    created: Option<String>,
+    class: Option<VeventClass>,
+    class_identifier: Option<String>,
+    created: Option<datetime::Instant>,
     description: Option<String>,
     geo: Option<String>,
     last_mod: Option<String>,
@@ -58,10 +68,42 @@ pub struct Vevent {
     // TODO: OPTIONAL, and MAY occur omore than once
     // alarms: Vec<Valarm>,
 }
+
 impl Vevent {
     pub(crate) fn set_dtstart(mut self, arg: &str) -> Vevent {
         // TODO: Validate input!!!
         self.dtstart = Some(String::from(arg));
+        self
+    }
+
+    pub(crate) fn set_class(mut self, arg: &str) -> Vevent {
+        let upcase_arg = arg.to_ascii_uppercase();
+
+        match upcase_arg.as_str() {
+            "PUBLIC" => {
+                self.class = Some(VeventClass::PUBLIC);
+                self.class_identifier = None;
+            }
+            "PRIVATE" => {
+                self.class = Some(VeventClass::PRIVATE);
+                self.class_identifier = None;
+            }
+            "CONFIDENTIAL" => {
+                self.class = Some(VeventClass::CONFIDENTIAL);
+                self.class_identifier = None;
+            }
+            _ => {
+                self.class = Some(VeventClass::PRIVATE);
+                self.class_identifier = Some(String::from(upcase_arg));
+            }
+        }
+
+        self
+    }
+
+    pub(crate) fn set_created(mut self, arg: datetime::Instant) -> Vevent {
+        // TODO: Validate input!!!
+        self.created = Some(arg);
         self
     }
 }
@@ -73,8 +115,10 @@ impl fmt::Display for Vevent {
         s = s + "UID:" + &self.uid + "\r\n";
 
         match &self.dtstart {
-            Some(value) => { s = s + "DTSTART:" + value + "\r\n"; }
-            None => {},
+            Some(value) => {
+                s = s + "DTSTART:" + value + "\r\n";
+            }
+            None => {}
         }
 
         s = s + "END:VEVENT\r\n";
@@ -132,6 +176,7 @@ impl Vcalendar {
             dtstart: Some("TODO".to_string()),
             // OPTIONAL, but MUST NOT occur more than once
             class: None,
+            class_identifier: None,
             created: None,
             description: None,
             geo: None,
@@ -184,10 +229,8 @@ impl fmt::Display for Vcalendar {
     }
 }
 
-
-
 #[cfg(tests)]
-mod tests {
+mod basic_tests {
     #[test]
     fn test_new_vcalendar() {
         let cal = Vcalendar::new_vcalendar(String::from("prodid"), String::from("version"));
@@ -200,9 +243,43 @@ mod tests {
     }
     #[test]
     fn test_new_vevent() {
-        let cal = Vcalendar::new_vcalendar(String::from("prodid"), String::from("version"));
+        let cal = Vcalendar::new_vcalendar("prodid", "version");
         let ev = cal.new_vevent("dtstamp", "uid");
         assert_eq!(ev.dtstamp, "dtstamp");
         assert_eq!(ev.uid, "uid");
     }
+}
+
+#[test]
+fn test_vevent_class_setter() {
+    let prodid = "prodid".to_string();
+    let version = "2.0".to_string();
+    let cal = Vcalendar::new_vcalendar(prodid, version);
+
+    let dtstamp = "dtstamp".to_string();
+    let uid = "uid".to_string();
+    let mut ev = cal.new_vevent(dtstamp, uid);
+
+    assert!(ev.class.is_none());
+    assert!(ev.class_identifier.is_none());
+
+    ev = ev.set_class("public");
+    assert_eq!(ev.class, Some(VeventClass::PUBLIC));
+    assert_eq!(ev.class_identifier, None);
+
+    ev = ev.set_class("private");
+    assert_eq!(ev.class, Some(VeventClass::PRIVATE));
+    assert_eq!(ev.class_identifier, None);
+
+    ev = ev.set_class("confidential");
+    assert_eq!(ev.class, Some(VeventClass::CONFIDENTIAL));
+    assert_eq!(ev.class_identifier, None);
+
+    ev = ev.set_class("something else");
+    assert_eq!(ev.class, Some(VeventClass::PRIVATE));
+    assert_eq!(ev.class_identifier, Some("SOMETHING ELSE".to_string()));
+
+    ev = ev.set_class("public");
+    assert_eq!(ev.class, Some(VeventClass::PUBLIC));
+    assert_eq!(ev.class_identifier, None);
 }
