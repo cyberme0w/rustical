@@ -72,6 +72,15 @@ fn main() {
     vevent1 = vevent1.set_priority(1);
     vevent1 = vevent1.set_summary("Morning coffee");
 
+    vevent1 = vevent1.set_location("Starbucks");
+    vevent1 = vevent1.set_url("http://github.com/cyberme0w/rustical");
+    vevent1 = vevent1.set_status(VeventStatus::CANCELLED);
+    vevent1 = vevent1.set_status(VeventStatus::TENTATIVE);
+    vevent1 = vevent1.set_status(VeventStatus::CONFIRMED);
+    vevent1 = vevent1.add_comment("Make sure to bring your laptop to look cool!");
+    vevent1 = vevent1.set_transp(VeventTransp::TRANSPARENT);
+    vevent1 = vevent1.set_transp(VeventTransp::OPAQUE);
+
     vcalendar.events.push(vevent1);
 
     println!("{}", vcalendar);
