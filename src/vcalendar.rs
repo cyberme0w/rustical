@@ -18,6 +18,20 @@ pub enum VeventClass {
     CONFIDENTIAL,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum VeventTransp {
+    OPAQUE,
+    TRANSPARENT
+}
+
+#[derive(Debug, PartialEq)]
+pub enum VeventStatus {
+    TENTATIVE,
+    CONFIRMED,
+    CANCELLED,
+}
+
+
 #[derive(Default)]
 pub struct Vevent {
     // REQUIRED, but MUST NOT occur more than once
@@ -37,9 +51,9 @@ pub struct Vevent {
     // Really, all we need is a 0-9 value
     priority: Option<u8>,
     seq: Option<String>,
-    status: Option<String>,
+    status: Option<VeventStatus>,
     summary: Option<String>,
-    transp: Option<String>,
+    transp: Option<VeventTransp>,
     url: Option<String>,
     recurid: Option<String>,
     // OPTIONAL, but SHOULD NOT occur more than once
@@ -52,7 +66,7 @@ pub struct Vevent {
     attach: Vec<String>,
     attendee: Vec<String>,
     categories: Vec<String>,
-    comment: Vec<String>,
+    comments: Vec<String>,
     contact: Vec<String>,
     exdate: Vec<String>,
     rstatus: Vec<String>,
@@ -151,9 +165,9 @@ impl Vevent {
         self.seq = Some(String::from(arg));
         self
     }
-    pub(crate) fn set_status(mut self, arg: &str) -> Vevent {
+    pub(crate) fn set_status(mut self, arg: VeventStatus) -> Vevent {
         // TODO: Validation
-        self.status = Some(String::from(arg));
+        self.status = Some(arg);
         self
     }
     pub(crate) fn set_summary(mut self, arg: &str) -> Vevent {
@@ -161,9 +175,8 @@ impl Vevent {
         self.summary = Some(String::from(arg));
         self
     }
-    pub(crate) fn set_transp(mut self, arg: &str) -> Vevent {
-        // TODO: Validation
-        self.transp = Some(String::from(arg));
+    pub(crate) fn set_transp(mut self, arg: VeventTransp) -> Vevent {
+        self.transp = Some(arg);
         self
     }
     pub(crate) fn set_url(mut self, arg: &str) -> Vevent {
@@ -176,6 +189,12 @@ impl Vevent {
         self.recurid = Some(String::from(arg));
         self
     }
+
+    pub(crate) fn add_comment(mut self, arg: &str) -> Vevent {
+        self.comments.push(arg.to_string());
+        self
+    }
+
 }
 
 impl fmt::Display for Vevent {
@@ -237,7 +256,13 @@ impl fmt::Display for Vevent {
             None => {}
         }
         match &self.status {
-            Some(value) => { s = s + "STATUS:" + value + "\r\n"; }
+            Some(value) => {
+                match value {
+                    VeventStatus::TENTATIVE => s = s + "STATUS:TENTATIVE\r\n",
+                    VeventStatus::CONFIRMED => s = s + "STATUS:CONFIRMED\r\n",
+                    VeventStatus::CANCELLED => s = s + "STATUS:CANCELLED\r\n",
+                }
+            },
             None => {}
         }
         match &self.summary {
@@ -245,7 +270,12 @@ impl fmt::Display for Vevent {
             None => {}
         }
         match &self.transp {
-            Some(value) => { s = s + "TRANSP:" + value + "\r\n"; }
+            Some(value) => {
+                match value {
+                    VeventTransp::TRANSPARENT => { s = s + "TRANSP:TRANSPARENT\r\n"; },
+                    VeventTransp::OPAQUE => { s = s + "TRANSP:OPAQUE\r\n"; },
+                }
+            },
             None => {}
         }
         match &self.url {
