@@ -1,48 +1,78 @@
 //! `rustical` provides a way to interact with vcalendar (.ics) files.
 
 mod vcalendar;
+
+use chrono::{Utc, TimeZone};
+use clap::Parser;
 use vcalendar::*;
 
-use clap::Parser;
-
-/// Parse the provided *.ics file into a VCALENDAR object, and output it to STDOUT
-#[derive(Parser)]
-struct Cli {
-    /// The path to the *.ics file
+/// A simple struct to hold arguments.
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
     #[arg(short, long)]
-    path: std::path::PathBuf,
+    new: bool,
+    #[arg(short, long)]
+    load: bool,
+    #[arg(short, long)]
+    path: Option<std::path::PathBuf>,
 }
 
 fn main() {
-    let args = Cli::parse();
+    // Get arguments and check if there are any invalid values or combinations.
+    let args = Args::parse();
+    println!("Arguments:");
+    println!("  new: {:?}", args.new);
+    println!("  load: {:?}", args.load);
+    println!("  path: {:?}", args.path);
 
+    // TODO: Make sure we are either creating a new vcalendar, OR loading a file. Not both.
+    // if args.new == args.load { panic!() }
+
+    // Generate a small VCALENDAR.
     let prodid = "prodid".to_string();
     let version = "2.0".to_string();
     let mut vcalendar = Vcalendar::new_vcalendar(prodid, version);
 
-    let dtstamp = "123123".to_string();
+    // Create two VEVENTs based on the VCALENDAR.
+    let dtstamp1 = Utc.with_ymd_and_hms(2022, 12, 24, 23, 59, 59).unwrap().naive_local();
+    let dtstamp2 = Utc.with_ymd_and_hms(2023, 2, 2, 2, 2, 2).unwrap().naive_local();
     let uid = "totally_unique_identifier".to_string();
+    let mut vevent1 = vcalendar.new_vevent(dtstamp1, uid);
+    let mut vevent2 = vcalendar.new_vevent(dtstamp2, String::from("second uid"));
 
-    let mut vevent1 = vcalendar.new_vevent(dtstamp, uid);
-    let mut vevent2 = vcalendar.new_vevent("second dtstamp".to_owned(), "second uid".to_owned());
+    // Set some of the VEVENTs parameters.
+    let dtstart = chrono::Utc::now().naive_local();
+    vevent1 = vevent1.set_dtstart(dtstart);
+    vevent2 = vevent2.set_dtstart(dtstart);
 
-    vevent1 = vevent1.set_dtstart("some_dtstart");
-    vevent2 = vevent2.set_dtstart("some_other_dtstart");
-
+    // Push the two VEVENTs onto the VCALENDAR.
     vcalendar.events.push(vevent1);
     vcalendar.events.push(vevent2);
 
+    // Print out the VCALENDAR, which should now include the two VEVENTS.
     println!("{}", vcalendar);
-    // println!("vevent: \n{}", event);
 
-    //v.print_vcalendar();
+    // Now remove the second event...
+    vcalendar.events.pop();
 
-    //generate_rustical_data_dir();
+    // ...and add the remaining fields to the first event.
+    vevent1 = vcalendar.events.pop().unwrap();
+    vevent1 = vevent1.set_class("public");
+    vevent1 = vevent1.set_description("This is an example description");
+
+    let dtstart = Utc.with_ymd_and_hms(2022, 12, 31, 12, 30, 00).unwrap().naive_local();
+    let dtend = Utc.with_ymd_and_hms(2023, 1, 1, 2, 30, 00).unwrap().naive_local();
+
+    vevent1 = vevent1.set_dtstart(dtstart);
+    vevent1 = vevent1.set_dtend(dtend);
+
+    vevent1 = vevent1.set_geo("37.386013;-122.082932");
+    vevent1 = vevent1.set_organizer("Someone important");
+    vevent1 = vevent1.set_priority(1);
+    vevent1 = vevent1.set_summary("Morning coffee");
+
+    vcalendar.events.push(vevent1);
+
+    println!("{}", vcalendar);
 }
-
-#[test]
-pub fn test_vcalendar_setters() {
-    assert_eq!(true, true);
-}
-#[test]
-pub fn test_vevent_setters() {}
